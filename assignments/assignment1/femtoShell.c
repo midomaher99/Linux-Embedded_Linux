@@ -9,7 +9,9 @@ int main (void)
 		printf("Maher > ");
 		fgets( buffer, 100,stdin);
 		if(strcmp(buffer, "exit\n"))
+		{
 			printf("Shell: %s",buffer);
+		}	
 		else
 		{
 			printf("Good Bye :) \n");
