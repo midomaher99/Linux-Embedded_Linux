@@ -1,5 +1,5 @@
 # Output
-![image](https://user-images.githubusercontent.com/41878952/190840881-ed15ef9b-20af-453f-81be-aaea6584fada.png)
+![image](https://user-images.githubusercontent.com/41878952/190841303-8167e438-3a29-4a5b-8257-80d172e3006c.png)
 
 # Used commands
 
