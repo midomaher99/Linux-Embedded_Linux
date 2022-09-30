@@ -1,5 +1,5 @@
 # Assignment2 
-  Assignment 2 is an extension of assignment 1, as some commands are added.
+  Assignment2 is an extension of assignment 1, as some commands are added.
 * rand command to generate a random value.
 * fib command to print the Fibonacci series of an input number.
 * fact command to print the factorial of an input number.
