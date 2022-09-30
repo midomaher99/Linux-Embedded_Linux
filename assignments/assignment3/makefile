@@ -19,20 +19,20 @@ endif
 
 #####################################
 $(EXE_PATH)/myFemtoShell: $(OBJ_PATH)/femtoShell.o $(OBJ_PATH)/$(LIB)
+	mkdir -p $(EXE_PATH)
 ifeq ($(LINKING_TYPE), static)
 	gcc -g $^  -o $@
 else ifeq ($(LINKING_TYPE), dynamic)
-	gcc -g $< -lCommands -L $(OBJ_PATH) -o $@
-	export LD_LIBRARY_PATH=$(OBJ_PATH):$$LD_LIBRARY_PATH
-
+	gcc -g $< -lCommands -L $(OBJ_PATH) -Wl,-rpath,$(OBJ_PATH) -o $@
 endif
 	@echo "##############BUILD IS DONE##############"
 
 $(OBJ_PATH)/femtoShell.o: femtoShell.c
-	echo "$(OBJ_PATH)"
+	mkdir -p $(OBJ_PATH)	
 	gcc -c -g $(INC) $< -o $@
 
 $(OBJ_PATH)/$(LIB): $(OBJ_PATH)/fib.o $(OBJ_PATH)/fact.o $(OBJ_PATH)/rand.o
+	mkdir -p $(OBJ_PATH)
 ifeq ($(LINKING_TYPE), static)
 	ar rcs $@ $^
 else ifeq ($(LINKING_TYPE), dynamic)
@@ -41,6 +41,7 @@ endif
 
 
 $(OBJ_PATH)/%.o:$(SOURCE_PATH)/%.c
+	mkdir -p $(OBJ_PATH)
 ifeq ($(LINKING_TYPE), static)
 	gcc -c -g $< -o $@
 else ifeq ($(LINKING_TYPE), dynamic)
