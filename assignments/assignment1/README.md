@@ -1,5 +1,5 @@
 # Assignment 1
-  compiling a simple program using GNU GCC toolchain without using any IDE.
+  Compiling a simple program using GNU GCC toolchain without using any IDE.
 ## Program discreption 
   Simple program interfaces with the user through stdin and stdout. The program repeats the user's input, except if user inputs "exit" command the program will terminate itself.
 ## Output
