@@ -1,4 +1,10 @@
-# Output
+# Assignment2 
+  Assignment 2 is an extension of assignment 1, as some commands are added.
+* rand command to generate a random value.
+* fib command to print the Fibonacci series of an input number.
+* fact command to print the factorial of an input number.
+Each command is coded separately in different files, then static and dynamic libraries were created for these commands.
+## Output
 ![image](https://user-images.githubusercontent.com/41878952/190841303-8167e438-3a29-4a5b-8257-80d172e3006c.png)
 
 # Used commands
