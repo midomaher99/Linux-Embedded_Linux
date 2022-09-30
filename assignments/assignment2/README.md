@@ -30,7 +30,4 @@ Each command has its own .c and .h files. Static and dynamic libraries were crea
 ### Creating the Dynamic library
 * gcc -shared  objects/dynamic/fact.o objects/dynamic/rand.o objects/dynamic/fib.o -o objects/dynamic/libCommands.so
 ### Creating dynamically linked executable
-* gcc objects/dynamic/femtoShell.o -L objects/dynamic/ -lCommands -o objects/execuables/myFemtoShellDynamic
-### Adding the library path to the environment variables
-* export LD_LIBRARY_PATH=./objects/dynamic:$LD_LIBRARY_PATH
-
+* gcc objects/dynamic/femtoShell.o -L objects/dynamic/ -lCommands -Wl,-rpath,./objects/dynamic -o objects/execuables/myFemtoShellDynamic
