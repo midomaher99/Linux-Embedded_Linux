@@ -3,11 +3,3 @@
 
 ## Output
 ![image](https://user-images.githubusercontent.com/41878952/193414062-4a233478-f225-4e1c-afda-53b3de9c9ba0.png)
-
-## Compilling commands
-* mkdir executables
-* cd executables
-* gcc ../myPwd.c -o myPwd
-* gcc ../myEcho.c -o myEcho
-* gcc ../myCp.c -o myCp
-* gcc ../myMv.c -o myMv
