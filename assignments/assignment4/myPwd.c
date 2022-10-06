@@ -13,6 +13,12 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
+#include <string.h>
+
+/*********************************************************************** ***********************************************
+ *  LOCAL MACROS CONSTANT\FUNCTION
+ *********************************************************************** **********************************************/
+#define fd_stdin (1U)
 
 /**********************************************************************************************************************
  *  LOCAL FUNCTIONS
@@ -26,9 +32,10 @@ int main()
 
     while ((buff = getcwd(NULL, 0)) == NULL);	//if there is any error recall the function
 
+    write(fd_stdin, buff, strlen(buff));
+	write(fd_stdin, "\n", 1);
 
-    printf("%s\n", buff);
-    // freeing buff due to instructions in (man getcwd)
+	// freeing buff due to instructions in (man getcwd)
     free(buff);
     return 0;
 }
