@@ -9,13 +9,17 @@
  *  INCLUDES
  *********************************************************************************************************************/
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "arguments.h"
 
 /**********************************************************************************************************************
  *  LOCAL MACROS CONSTANT\FUNCTION
  *********************************************************************************************************************/
-#define ARGS_ARRAY (**args)
-#define PTR_ARGS_ARRAY (*args)
-
 
 /**********************************************************************************************************************
  *  LOCAL DATA TYPES AND STRUCTURES
@@ -24,8 +28,13 @@ typedef enum
 {
 	not_exist,
 	exist
-}flag_t;
-
+}binaryFlag_t;
+typedef enum
+{
+	no_redir,
+	input,
+	output
+}redirectFlag_t;
 /**********************************************************************************************************************
  *  LOCAL DATA
  *********************************************************************************************************************/
@@ -73,25 +82,40 @@ typedef enum
  *
  * \Parameters (in) : char* line 	   : the input from the user the line is '\n' terminated
  * 					  ssize_t length   : the input line length + 2
- * \Parameters (out): char** (**args)[]: will be dynamically allocated to contain the commands' arguments
+ * \Parameters (out): char* (**args)[]: will be dynamically allocated to contain the commands' arguments
  * 										 must be freed after calling the function
  * \Return value:   : None
  *******************************************************************************/
 
-void extract(char* line, ssize_t length, char** (**args)[])
+
+typedef struct
 {
-	flag_t separator_flag=exist;	//exist when the last char is a separator (space, ';', '\n' or whatever except regular character)
+	char* in;
+	char* out;
+	char* err;
+}stdFiles_t;
 
-	int line_iterator;	//iterates on the input
+typedef struct
+{
+	stdFiles_t stdfiles;	//redirections
+	char* (*args)[];		//arguments
+}command_t;
+
+
+int parser(command_t* command, char* line, int* start_index)
+{
+	binaryFlag_t separator_flag=exist;	//exist when the last char is a separator (space, ';', '\n' or whatever except regular character)
+	redirectFlag_t redir_flag = not_exist;	//when redirection exist
 	int args_iterator=0;
+	int line_iterator;
 
-	PTR_ARGS_ARRAY=(char**(*)[])malloc(length*sizeof(char**));	//length is for worst case and will be reallocated later
-	
 	//extracting method is shown in a flow chart in README.md file
-	for (line_iterator=0;line_iterator<(length);line_iterator++)	//loop on the input
+	for (line_iterator=(*start_index);line[line_iterator]!=';'&&line[line_iterator]!='\n';line_iterator++)	//loop on the input
 	{
-		if(line[line_iterator]== ' ')
+
+		switch (line[line_iterator])
 		{
+		case ' ':
 			if(separator_flag == exist)
 			{
 				//do nothing
@@ -101,70 +125,102 @@ void extract(char* line, ssize_t length, char** (**args)[])
 				separator_flag=exist;
 				line[line_iterator]='\0';
 			}
-		}
-
-		else if(line[line_iterator]== ';')
-		{
-			if(separator_flag == exist)
+			break;
+		case '>':
+			line[line_iterator]='\0';
+			redir_flag = output;
+			break;
+		case '<':
+			line[line_iterator]='\0';
+			redir_flag = input;
+			break;
+		default:
+			if(redir_flag == output)
 			{
-				ARGS_ARRAY[args_iterator] = '\0';
+				command->stdfiles.out = &line[line_iterator];
+			}
+			else if(redir_flag ==input)
+			{
+				command->stdfiles.in=&line[line_iterator];
+			}
+			else if(separator_flag == exist)
+			{
+				(*(command->args))[args_iterator]=&line[line_iterator];
 				args_iterator++;
 			}
-			else//flag not exist
-			{
-				separator_flag = exist;
-				line[line_iterator]='\0';
-				ARGS_ARRAY[args_iterator]='\0';
-				args_iterator++;
-			}
-		}
-
-		else if(line[line_iterator]== '\n')
-		{
-			if(separator_flag == exist)
-			{
-				ARGS_ARRAY[args_iterator]=&line[line_iterator];
-				args_iterator++;
-				ARGS_ARRAY[args_iterator]='\0';
-				line_iterator++;
-				line[line_iterator]='\0';
-			}
-			else//flag not exist
-			{
-				line[line_iterator]='\0';
-				line_iterator++;
-				line[line_iterator]='\n';
-				ARGS_ARRAY[args_iterator]='\0';
-				args_iterator++;
-				ARGS_ARRAY[args_iterator]=&line[line_iterator];
-				line_iterator++;
-				args_iterator++;
-				line[line_iterator]='\0';
-				ARGS_ARRAY[args_iterator]='\0';
-			}
-			args_iterator++;
-			ARGS_ARRAY[args_iterator]='\n';	//to know that this is the last command
-		}
-
-		else
-		{
-			if(separator_flag == exist)
-			{
-				ARGS_ARRAY[args_iterator]=&line[line_iterator];
-				args_iterator++;
-				separator_flag = not_exist;
-			}
-			else//flag not exist
+			else
 			{
 				//do nothing
-			}	
-		} 
-		
+			}
+			separator_flag = not_exist;
+			redir_flag = not_exist;
+			break;
+		}
 	}
 
-	args_iterator++;	// ++ as ARGS_ARRAY is zero indexed but realloc() needs the absolute number of elements
-	PTR_ARGS_ARRAY=(char**(*)[])realloc(PTR_ARGS_ARRAY,(size_t)args_iterator*sizeof(char**)); //reallocating ARGS_ARRAY to avoid over sizing
+	if(line[line_iterator]==';')
+	{
+		line[line_iterator] ='\0';
+		line_iterator+=1;
+	}
+	else if(line[line_iterator]=='\n')
+	{line[line_iterator]='\0';
+	line_iterator++;
+	line[line_iterator]='\n';
+	(*(command->args))[args_iterator]='\0';
+	}
+	return line_iterator;
 }
+
+
+
+
+
+void executer(command_t* command)
+{
+	pid_t ret_pid;
+	int child_status;
+	ret_pid=fork();
+	if(ret_pid < 0)//faild
+	{
+
+	}
+	else if(ret_pid > 0)//parent
+	{
+		wait(&child_status);
+	}
+	else//child
+	{
+		int fd;
+		//redirections
+		if(command->stdfiles.in != NULL)
+		{
+			fd= open(command->stdfiles.in, O_CREAT | O_RDWR,0666);
+			dup2(fd,0);
+			close(fd);
+		}
+		if(command->stdfiles.out != NULL)
+		{
+			fd= open(command->stdfiles.out, O_CREAT | O_RDWR,0666);
+			dup2(fd,1);
+			close(fd);
+		}
+		if(command->stdfiles.err != NULL)
+		{
+			fd= open(command->stdfiles.err, O_CREAT | O_RDWR,0666);
+			dup2(fd,2);
+			close(fd);
+		}
+		//exec
+		execvp((*command->args)[0],*command->args);
+	}
+}
+
+
+
+
+
+
 
 
 
