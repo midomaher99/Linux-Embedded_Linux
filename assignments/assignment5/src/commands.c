@@ -1,0 +1,192 @@
+/**********************************************************************************************************************
+
+ *  FILE DESCRIPTION
+ *  -------------------------------------------------------------------------------------------------------------------
+ *         File:  commands.c
+ *********************************************************************************************************************/
+
+/**********************************************************************************************************************
+ *  INCLUDES
+ *********************************************************************************************************************/
+
+
+#include "commands.h"
+#include "config.h"
+#include "errno.h"
+#include "loc_vars.h"
+#include "stdio.h"
+#include "internal_commands.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include "unistd.h"
+#include "string.h"
+/**********************************************************************************************************************
+ *  LOCAL MACROS CONSTANT\FUNCTION
+ *********************************************************************************************************************/
+
+#define NUM_OF_INTERNAL_COMMANDS	(4u)
+#define HISTORY_READ_BUFF_SIZE	(256u)
+/**********************************************************************************************************************
+ *  LOCAL DATA
+ *********************************************************************************************************************/
+
+/**********************************************************************************************************************
+ *  GLOBAL DATA
+ *********************************************************************************************************************/
+internalcommand_t internal_commands_array[NUM_OF_INTERNAL_COMMANDS]=
+{
+		{"myset",&myset},
+		{"myexport",&myexport},
+		{"myhistory",&myhistory},
+		{"mycd",&mycd},
+
+};
+/**********************************************************************************************************************
+ *  LOCAL FUNCTIONS
+ *********************************************************************************************************************/
+int mycd(int argc, char*argv[])
+{
+	//chdir
+	return 0;
+}
+
+int myhistory(int argc, char*argv[])
+{
+	int ret_val=1;
+
+	if(argc>1)
+	{
+		printf("too much arguments\n");
+		ret_val = -1;
+	}
+	else
+	{
+		ssize_t read_size;
+		ssize_t write_size;
+		char read_buff[HISTORY_READ_BUFF_SIZE];
+
+		int history_fd= open ("/tmp/.mybash_history.log", O_RDONLY);
+
+		if(history_fd == -1)
+		{
+			printf("Error  /tmp/.mybash_history.log to read commands history.\n");
+			printf("errno = %d\n",errno);
+			ret_val= -2;
+		}
+		while ((read_size = read(history_fd,read_buff,HISTORY_READ_BUFF_SIZE))!=0) //not end of the file
+		{
+			if(read_size == -1)
+			{
+				printf("Error reading /tmp/.mybash_history.log\n");
+				printf("errno = %d\n",errno);
+				ret_val= -3;
+			}
+			else
+			{
+				if((write_size=write(1,read_buff,read_size))==-1)
+				{
+					printf("Error printing commands history to stdout.\n");
+					printf("errno = %d\n",errno);
+					ret_val=-4;
+					break;
+				}
+			}
+		}
+	}
+	return ret_val;
+}
+int myset(int argc, char*argv[])
+{
+	int ret_val=1;
+	if(argc>1)
+	{
+		printf("too much arguments\n");
+		ret_val = -1;
+	}
+	else
+	{
+		for(int i=0;loc_vars_array[i]!=NULL;i++)
+		{
+			printf("%s=%s\n",loc_vars_array[i]->var,loc_vars_array[i]->val);
+		}
+	}
+	return ret_val;
+}
+int myexport(int argc, char*argv[])
+{
+	int ret_val=0;
+	if(argc>2)
+	{
+		printf("too much arguments\n");
+		ret_val = -1;
+	}
+	else if(argc<2)
+	{
+		printf("not enough arguments arguments\n");
+		ret_val = -2;
+	}
+	else
+	{
+		for(int i=0;loc_vars_array[i]!=NULL;i++)
+		{
+			if(strcmp(loc_vars_array[i]->var,argv[1]) ==0)
+			{
+				ret_val = 1;
+				setenv(loc_vars_array[i]->var,loc_vars_array[i]->val,1);
+				break;
+			}
+		}
+
+	}
+	return ret_val;
+}
+
+/**********************************************************************************************************************
+ *  GLOBAL FUNCTIONS
+ *********************************************************************************************************************/
+
+/******************************************************************************
+ * \Syntax          : Std_ReturnType FunctionName(AnyType parameterName)
+ * \Description     : Describe this service
+ *
+ * \Sync\Async      : Synchronous
+ * \Reentrancy      : Non Reentrant
+ * \Parameters (in) : parameterName   Parameter Describtion
+ * \Parameters (out): None
+ * \Return value:   : Std_ReturnType  E_OK
+ *                                    E_NOT_OK
+ *******************************************************************************/
+
+
+int is_internal_command(command_t* command)
+{
+	int ret_val =-1;
+	for(int command_index=0;command_index<NUM_OF_INTERNAL_COMMANDS;command_index++)
+	{
+		if(strcmp((*command->ptr_args_arr)[0],internal_commands_array[command_index].command_name) == 0)
+			ret_val= command_index;
+	}
+	return ret_val;
+}
+
+
+
+
+
+int internal_executer(command_t*  command,int internal_command_index)
+{
+	int ret_val =1;
+	int argc=0;
+	for(int i =0;(*command->ptr_args_arr)[i]!=(char*)'\0' ;i++)
+		argc++;
+
+	ret_val=internal_commands_array[internal_command_index].ptr_command(argc,&((*command->ptr_args_arr)[0]));
+
+	return ret_val;
+}
+
+/**********************************************************************************************************************
+ *  END OF FILE: commands.c
+ *********************************************************************************************************************/

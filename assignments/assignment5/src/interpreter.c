@@ -15,17 +15,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-
-#include "arguments.h"
-
-
-
-
-
-
-
+#include "errno.h"
 #include <stdio.h>
-
+#include "commands.h"
+#include "loc_vars.h"
 /**********************************************************************************************************************
  *  LOCAL MACROS CONSTANT\FUNCTION
  *********************************************************************************************************************/
@@ -44,6 +37,7 @@ typedef enum
 	input,
 	output
 }redirectFlag_t;
+
 /**********************************************************************************************************************
  *  LOCAL DATA
  *********************************************************************************************************************/
@@ -60,6 +54,80 @@ typedef enum
  *  LOCAL FUNCTIONS
  *********************************************************************************************************************/
 
+
+
+
+
+int external_redirection(command_t* command)
+{
+	int fd;
+	int ret_val =1;
+	if(command->stdfiles.in != NULL)
+	{
+		if((fd= open(command->stdfiles.in, O_CREAT | O_RDWR,0666)) == -1)
+		{
+			printf("Error opening %s to redirect output.\n", command->stdfiles.in);
+			printf("errno = %d\n",errno);
+			ret_val=-1;
+		}
+		if(dup2(fd,0) == -1)
+		{
+			printf("Error duplicating %s to redirect output.\n", command->stdfiles.in);
+			printf("errno = %d\n",errno);
+			ret_val=-2;
+		}
+		if(close(fd) == -1)
+		{
+			printf("Error closing %s .\n", command->stdfiles.in);
+			printf("errno = %d\n",errno);
+			ret_val =-3;
+		}
+	}
+	if(command->stdfiles.out != NULL)
+	{
+		if((fd= open(command->stdfiles.out, O_CREAT | O_RDWR,0666)) == -1)
+		{
+			printf("Error opening %s to redirect output.\n", command->stdfiles.out);
+			printf("errno = %d\n",errno);
+			ret_val=-4;
+		}
+		if(dup2(fd,1) == -1)
+		{
+			printf("Error duplicating %s to redirect output.\n", command->stdfiles.out);
+			printf("errno = %d\n",errno);
+			ret_val=-5;
+		}
+		if(close(fd) == -1)
+		{
+			printf("Error closing %s .\n", command->stdfiles.out);
+			printf("errno = %d\n",errno);
+			ret_val =-6;
+		}
+	}
+
+	if(command->stdfiles.err != NULL)
+	{
+		if((fd= open(command->stdfiles.err, O_CREAT | O_RDWR,0666)) == -1)
+		{
+			printf("Error opening %s to redirect error.\n", command->stdfiles.err);
+			printf("errno = %d\n",errno);
+			ret_val=-7;
+		}
+		if(dup2(fd,2) == -1)
+		{
+			printf("Error duplicating %s to redirect error.\n", command->stdfiles.err);
+			printf("errno = %d\n",errno);
+			ret_val=-8;
+		}
+		if(close(fd) == -1)
+		{
+			printf("Error closing %s .\n", command->stdfiles.err);
+			printf("errno = %d\n",errno);
+			ret_val =-9;
+		}
+	}
+	return ret_val;
+}
 /**********************************************************************************************************************
  *  GLOBAL FUNCTIONS
  *********************************************************************************************************************/
@@ -96,41 +164,7 @@ typedef enum
  * \Return value:   : None
  *******************************************************************************/
 
-#define NUM_OF_INTERNAL_COMMANDS	(3u)
 
-typedef struct
-{
-	char* in;
-	char* out;
-	char* err;
-}stdFiles_t;
-
-
-typedef struct
-{
-	stdFiles_t stdfiles;	//redirections
-	char* (*ptr_args_arr)[];		//arguments
-}command_t;
-
-typedef struct
-{
-	char* var;
-	char* val;
-}locVariable_t;
-extern locVariable_t* loc_vars_array[256];
-char *getloc(const char *name)
-{
-	char* ret_val=NULL;
-	for(int i =0; loc_vars_array[i] != NULL; i++)
-	{
-		if ((strcmp((loc_vars_array[i]->var), name)) == 0)
-		{
-			ret_val=loc_vars_array[i]->val;
-			break;
-		}
-	}
-	return ret_val;
-}
 int parser(command_t* command, char* input_line, int* start_index)
 {
 	binaryFlag_t separator_flag=exist;	//exist when the last char is a separator (space, ';', '\n' or whatever except regular character)
@@ -212,7 +246,7 @@ int parser(command_t* command, char* input_line, int* start_index)
 
 	for (int i=0;i<args_iterator;i++)	//loop for all args to find the dereference symbol '$'
 	{
-		if((*command->ptr_args_arr)[i] != '\0' &&((*command->ptr_args_arr)[i])[0] == '$' && strlen((*command->ptr_args_arr)[i]) != 1)	//variable needs to be dereferenced
+		if((*command->ptr_args_arr)[i] !=(char*) '\0' &&((*command->ptr_args_arr)[i])[0] == '$' && strlen((*command->ptr_args_arr)[i]) != 1)	//variable needs to be dereferenced
 		{
 			if((variable=getenv(((*command->ptr_args_arr)[i])+1)) != NULL)	//environmental variable
 				(*command->ptr_args_arr)[i] = variable;
@@ -222,189 +256,69 @@ int parser(command_t* command, char* input_line, int* start_index)
 
 			else	//not a variable?? then ignore it by shifting all next args back by one step
 			{
-				for(int ignore_iterator =i;(*command->ptr_args_arr)[ignore_iterator] != '\0';ignore_iterator++)
+				for(int ignore_iterator =i;(*command->ptr_args_arr)[ignore_iterator] != (char*)'\0';ignore_iterator++)
 				{
 					(*command->ptr_args_arr)[ignore_iterator] = (*command->ptr_args_arr)[ignore_iterator+1];
 				}
+				i--;
 			}
 		}
 
 	}
 
-	return line_iterator;
+	return line_iterator;	//the index of the start of new command
 }
 
-typedef struct
-{
-	char* command_name;
-	int(*ptr_command)(int argc, char*argv[]);
-}internalcommand_t;
-#define HISTORY_READ_BUFF_SIZE	(200u)
-int myhistory(int argc, char*argv[])
+
+
+int executer(command_t* command)
 {
 	int ret_val=1;
-	if(argc>1)
-		ret_val = -1;
-	else
-	{
-		int history_fd= open ("/tmp/.mybash_history", O_RDONLY);
-		ssize_t read_size;
-		ssize_t write_size;
-		char read_buff[HISTORY_READ_BUFF_SIZE];
-		if(history_fd == -1)
-			ret_val= -2;
-		while ((read_size = read(history_fd,read_buff,HISTORY_READ_BUFF_SIZE))!=0) //not end of the file
-		{
-			if(read_size == -1)
-				ret_val= -3;
-			else
-			{
-				if((write_size=write(1,read_buff,read_size))==-1)
-				{
-					ret_val=-4;
-					break;
-				}
-			}
-		}
-	}
-	return ret_val;
-}
-int myset(int argc, char*argv[])
-{
-	int ret_val=0;
-	if(argc>1)
-		ret_val = -1;
-	else
-	{
-		for(int i=0;loc_vars_array[i]!=NULL;i++)
-		{
-			printf("%s=%s\n",loc_vars_array[i]->var,loc_vars_array[i]->val);
-		}
-	}
-	return ret_val;
-}
-int myexport(int argc, char*argv[])
-{
-	int ret_val=0;
-	if(argc>2)
-		ret_val = -1;
-	else if(argc<2)
-		ret_val = -2;
-	else
-	{
-		for(int i=0;loc_vars_array[i]!=NULL;i++)
-		{
-			if(strcmp(loc_vars_array[i]->var,argv[1]) ==0)
-			{
-				ret_val = 1;
-				setenv(loc_vars_array[i]->var,loc_vars_array[i]->val,1);
-				break;
-			}
-		}
-
-	}
-	return ret_val;
-}
-internalcommand_t internal_commands_array[NUM_OF_INTERNAL_COMMANDS]=
-{
-		{"myset",&myset},
-		{"myexport",&myexport},
-		{"myhistory",&myhistory}
-};
-
-
-int is_internal_command(command_t* command)
-{
-	for(int command_index=0;command_index<NUM_OF_INTERNAL_COMMANDS;command_index++)
-	{
-		if(strcmp((*command->ptr_args_arr)[0],internal_commands_array[command_index].command_name) == 0)
-			return command_index;
-	}
-	return -1;
-}
-int is_variable(command_t* command)
-{
-	int ret_val=-1;
-	for(int i =0;((*command->ptr_args_arr)[0])[i] != '\0';i++)
-	{
-		if(((*command->ptr_args_arr)[0])[i] == '=')
-		{
-			ret_val=i+1;
-			((*command->ptr_args_arr)[0])[i] = '\0';
-			break;
-		}
-	}
-	return ret_val;
-}
-extern int variables_counter;
-void executer(command_t* command)
-{
-	int command_index;
+	int internal_command_index;	//
 	int val_index;
-	if((command_index=is_internal_command(command))!=-1)
+	if((internal_command_index=is_internal_command(command))!=-1)
 	{
-		int argc=0;
+		ret_val=internal_executer(command, internal_command_index);
 
-		for(int i =0;(*command->ptr_args_arr)[i]!='\0' ;i++)
-			argc++;
-
-		internal_commands_array[command_index].ptr_command(argc,&((*command->ptr_args_arr)[0]));
 	}
 	else if((val_index=is_variable(command))!=-1)
 	{
-		if (variables_counter>=NUM_OF_INTERNAL_COMMANDS)
-		{
-			//can't add more variables
-		}
-		else
-		{
-			loc_vars_array[variables_counter]=(locVariable_t*)malloc(sizeof(locVariable_t));
-			loc_vars_array[variables_counter]->var=(char*)malloc(strlen((*command->ptr_args_arr)[0])*sizeof (char));
-			strcpy(loc_vars_array[variables_counter]->var, (*command->ptr_args_arr)[0]);
-			loc_vars_array[variables_counter]->val=(char*)malloc(strlen(((*command->ptr_args_arr)[0])+val_index)*sizeof (char));
-			strcpy(loc_vars_array[variables_counter]->val, ((*command->ptr_args_arr)[0])+val_index);
-			variables_counter++;
-		}
+		ret_val=variable_executer(command, val_index);
 	}
 	else	//extenal command
 	{
+
 		pid_t ret_pid;
 		int child_status;
 		ret_pid=fork();
 		if(ret_pid < 0)//faild
 		{
+			printf("Error while fork to execute external command\n");
+			printf("errno = %d\n",errno);
+			ret_val =-1;
 
 		}
 		else if(ret_pid > 0)//parent
 		{
-			wait(&child_status);
+			if(wait(&child_status) == -1)
+			{
+				printf("Error while waiting for the child process status\n");
+				printf("errno = %d\n",errno);
+			}
+
 		}
 		else//child
 		{
-			int fd;
 			//redirections
-			if(command->stdfiles.in != NULL)
-			{
-				fd= open(command->stdfiles.in, O_CREAT | O_RDWR,0666);
-				dup2(fd,0);
-				close(fd);
-			}
-			if(command->stdfiles.out != NULL)
-			{
-				fd= open(command->stdfiles.out, O_CREAT | O_RDWR,0666);
-				dup2(fd,1);
-				close(fd);
-			}
-			if(command->stdfiles.err != NULL)
-			{
-				fd= open(command->stdfiles.err, O_CREAT | O_RDWR,0666);
-				dup2(fd,2);
-				close(fd);
-			}
+			external_redirection(command);
+
 			//exec
 			execvp((*command->ptr_args_arr)[0],*command->ptr_args_arr);
 		}
 	}
+	command->stdfiles.in=NULL;
+	command->stdfiles.out=NULL;
+	command->stdfiles.err=NULL;
 }
 
 
@@ -413,6 +327,28 @@ void executer(command_t* command)
 
 
 
+int interpreter(command_t* command, char* input_line)
+{
+	int index_new_command=0;
+	//parsing a line
+	/*
+	 * in case of line contains multi-commands, commands will be parsed
+	 * and executed sequentially
+	 */
+
+	while(input_line[index_new_command] != '\n')	//loop till the end of line(last command)
+	{
+
+		//parser will return every time a single command parsed
+		index_new_command=parser(command, input_line, &index_new_command);
+		//cheack return
+		//execute the parsed command
+		executer(command);
+		//check return
+
+	}
+
+}
 
 /**********************************************************************************************************************
  *  END OF FILE: arguments.c

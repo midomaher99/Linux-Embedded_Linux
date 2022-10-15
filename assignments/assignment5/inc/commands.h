@@ -2,32 +2,50 @@
 
  *  FILE DESCRIPTION
  *  -------------------------------------------------------------------------------------------------------------------
- *         File:  prompt.h  
- *  
+ *         File:  commands.c
  *********************************************************************************************************************/
-#ifndef PROMPT_H
-#define PROMPT_H
 
+#ifndef COMMANDS_H
+#define COMMANDS_H
 
+/**********************************************************************************************************************
+ *  GLOBAL DATA TYPES AND STRUCTURES
+ *********************************************************************************************************************/
+
+typedef struct
+{
+	char* in;
+	char* out;
+	char* err;
+}stdFiles_t;
+
+typedef struct
+{
+	stdFiles_t stdfiles;	//redirections
+	char* (*ptr_args_arr)[];		//arguments
+}command_t;
+
+typedef struct
+{
+	char* command_name;
+	int(*ptr_command)(int argc, char*argv[]);	//the command function
+}internalcommand_t;
+
+ 
 /**********************************************************************************************************************
  *  GLOBAL FUNCTION PROTOTYPES
  *********************************************************************************************************************/
 
-/******************************************************************************
-* \Syntax          : int print_prompt();
-* \Description     : prints the prompt message which is the current user and the current path
-*
-*
-* \Parameters (in) : None
-* \Parameters (out): None
-* \Return value:   : 0     if success
-                     -1    if there is an error getting user name (no match for "USERNAME" environment variable
-                    errno  if there is an error getting the path of the current working directory
-*******************************************************************************/
-extern int print_prompt();
+extern int internal_executer(command_t*  command,int internal_command_index);
+extern int is_internal_command(command_t* command);
+
  
-#endif  /* PROMPT_H */
+#endif  /* FILE_NAME_H */
 
 /**********************************************************************************************************************
- *  END OF FILE: prompt.h
+ *  END OF FILE: Std_Types.h
  *********************************************************************************************************************/
+
+
+
+
