@@ -16,7 +16,7 @@ int myhistory(int argc, char*argv[]);
 int myset(int argc, char*argv[]);
 int myexport(int argc, char*argv[]);
 int mypwd(int argc, char*argv[]);
-
+int myexit(int argc, char*argv[]);
 
 #endif  /* INTERNAL_COMMANDS_H*/
 

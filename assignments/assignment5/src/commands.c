@@ -26,11 +26,8 @@
  *  LOCAL MACROS CONSTANT\FUNCTION
  *********************************************************************************************************************/
 
-#define NUM_OF_INTERNAL_COMMANDS	(5u)
+#define NUM_OF_INTERNAL_COMMANDS	(6u)
 #define HISTORY_READ_BUFF_SIZE	(256u)
-/**********************************************************************************************************************
- *  LOCAL DATA
- *********************************************************************************************************************/
 
 /**********************************************************************************************************************
  *  GLOBAL DATA
@@ -41,7 +38,8 @@ internalcommand_t internal_commands_array[NUM_OF_INTERNAL_COMMANDS]=
 		{"myexport",&myexport},
 		{"myhistory",&myhistory},
 		{"mycd",&mycd},
-		{"mypwd",&mypwd}
+		{"mypwd",&mypwd},
+		{"myexit", &myexit}
 
 };
 
@@ -95,8 +93,108 @@ int internal_executer(command_t*  command,int internal_command_index)
 	for(int i =0;(*command->ptr_args_arr)[i]!=(char*)'\0' ;i++)
 		argc++;
 
+	int dest_fd;
 
+	int stdin_fd_backup=0;
+	int stdout_fd_backup=1;
+	int stderr_fd_backup=2;
+
+	//redirect
+	if(command->stdfiles.in != NULL)
+	{
+		stdin_fd_backup=dup(0);
+
+		if((dest_fd= open(command->stdfiles.in, O_CREAT | O_RDWR,0666)) == -1)
+		{
+			printf("Error opening %s to redirect input.\n", command->stdfiles.in);
+			printf("errno = %d\n",errno);
+			ret_val=-1;
+		}
+		if(dup2(dest_fd,0) == -1)
+		{
+			printf("Error duplicating %s to redirect input.\n", command->stdfiles.in);
+			printf("errno = %d\n",errno);
+			ret_val=-2;
+		}
+		if(close(dest_fd) == -1)
+		{
+			printf("Error closing %s .\n", command->stdfiles.in);
+			printf("errno = %d\n",errno);
+			ret_val =-3;
+		}
+	}
+	if(command->stdfiles.out != NULL)
+	{
+		stdout_fd_backup=dup(1);
+
+
+		if((dest_fd= open(command->stdfiles.out, O_CREAT | O_RDWR,0666)) == -1)
+		{
+			printf("Error opening %s to redirect output.\n", command->stdfiles.out);
+			printf("errno = %d\n",errno);
+			ret_val=-4;
+		}
+		if(dup2(dest_fd,1) == -1)
+		{
+			printf("Error duplicating %s to redirect output.\n", command->stdfiles.out);
+			printf("errno = %d\n",errno);
+			ret_val=-5;
+		}
+		if(close(dest_fd) == -1)
+		{
+			printf("Error closing %s .\n", command->stdfiles.out);
+			printf("errno = %d\n",errno);
+			ret_val =-6;
+		}
+	}
+
+	if(command->stdfiles.err != NULL)
+	{
+
+		stderr_fd_backup=dup(2);
+
+
+		if((dest_fd= open(command->stdfiles.err, O_CREAT | O_RDWR,0666)) == -1)
+		{
+			printf("Error opening %s to redirect err.\n", command->stdfiles.err);
+			printf("errno = %d\n",errno);
+			ret_val=-7;
+		}
+		if(dup2(dest_fd,2) == -1)
+		{
+			printf("Error duplicating %s to redirect err.\n", command->stdfiles.err);
+			printf("errno = %d\n",errno);
+			ret_val=-8;
+		}
+		if(close(dest_fd) == -1)
+		{
+			printf("Error closing %s .\n", command->stdfiles.err);
+			printf("errno = %d\n",errno);
+			ret_val =-9;
+		}
+	}
+
+	//call the internal command pasing argc and argv
 	ret_val=internal_commands_array[internal_command_index].ptr_command(argc,&((*command->ptr_args_arr)[0]));
+
+
+	//restore the default stdfiles
+	if(command->stdfiles.in != NULL)
+	{
+		dup2(stdin_fd_backup, 0);
+		close (stdin_fd_backup);
+	}
+	if(command->stdfiles.out != NULL)
+	{
+		dup2(stdout_fd_backup, 1);
+		close (stdout_fd_backup);
+
+	}
+	if(command->stdfiles.err != NULL)
+	{
+		dup2(stderr_fd_backup, 2);
+		close (stderr_fd_backup);
+	}
 
 	return ret_val;
 }
@@ -185,6 +283,7 @@ int myhistory(int argc, char*argv[])
 				}
 			}
 		}
+		printf("\n");
 	}
 	return ret_val;
 }
@@ -258,6 +357,13 @@ int mypwd(int argc, char*argv[])
 	}
 	free(path);
 	return ret_val;
+}
+
+int myexit(int argc, char*argv[]) //argc and argv just for convention but not used
+{
+	_exit(15);	//unique return to know iam terminated from exit
+
+	return 1; //wont return but just for convention of internal commands  int command(int argc, char*argv[])
 }
 /**********************************************************************************************************************
  *  END OF FILE: commands.c

@@ -35,6 +35,16 @@ typedef enum
 	output
 }redirectFlag_t;
 
+/**********************************************************************************************************************
+ *  LOCAL DATA
+ *********************************************************************************************************************/
+static binaryFlag_t pipe_flag = not_exist;
+static int pipe_counter=0; //for multi piping in same line
+char pipe_tmp_file1_path[]={"/tmp/piping1-XXXXXX"};
+char pipe_tmp_file2_path[]={"/tmp/piping2-XXXXXX"};
+int pipe_tmp_file1_fd;
+int pipe_tmp_file2_fd;
+
 
 /**********************************************************************************************************************
  *  LOCAL FUNCTIONS
@@ -155,7 +165,7 @@ int parser(command_t* command, char* input_line, int* start_index)
 
 	//tokenizing the input line
 	//parsing only one command in case of multi-command line
-	for (line_iterator=(*start_index); (input_line[line_iterator]!=';' && input_line[line_iterator]!='\n');line_iterator++)
+	for (line_iterator=(*start_index); (input_line[line_iterator]!=';' && input_line[line_iterator]!='\n' && input_line[line_iterator]!='|' );line_iterator++)
 	{
 
 		switch (input_line[line_iterator])
@@ -171,7 +181,17 @@ int parser(command_t* command, char* input_line, int* start_index)
 				input_line[line_iterator]='\0';
 			}
 			break;
-
+		case '\t':	//same as spaces
+			if(separator_flag == exist)
+			{
+				//do nothing
+			}
+			else//flag not exist
+			{
+				separator_flag=exist;
+				input_line[line_iterator]='\0';
+			}
+			break;
 		case '>':
 			input_line[line_iterator]='\0';
 			redir_flag = output;
@@ -212,6 +232,14 @@ int parser(command_t* command, char* input_line, int* start_index)
 	{
 		input_line[line_iterator] ='\0';	//terminating last token be '\0'
 		line_iterator+=1;
+		pipe_flag=not_exist;
+	}
+	else if(input_line[line_iterator]=='|')
+	{
+		input_line[line_iterator] ='\0';	//terminating last token be '\0'
+		line_iterator+=1;
+		pipe_flag=exist;
+		pipe_counter++;
 	}
 	else if(input_line[line_iterator]=='\n')
 	{
@@ -219,7 +247,7 @@ int parser(command_t* command, char* input_line, int* start_index)
 		line_iterator++;
 		input_line[line_iterator]='\n';		//add a dummy command at the end of all commands '\n' which will be handles as an enter press
 		(*(command->ptr_args_arr))[args_iterator]='\0';//terminate the dummy command
-
+		pipe_flag=not_exist;
 	}
 
 	//variables evaluating in case of '$' detected
@@ -273,8 +301,42 @@ int parser(command_t* command, char* input_line, int* start_index)
 int executer(command_t* command)
 {
 	int ret_val=1;
-	int internal_command_index;	//
+	int internal_command_index;
 	int val_index;
+
+	//piping redirecting
+	if(pipe_flag == exist && pipe_counter ==1)
+	{
+		open(pipe_tmp_file1_path, O_TRUNC);
+		command->stdfiles.out=pipe_tmp_file1_path;
+	}
+	else if (pipe_flag == not_exist && pipe_counter !=0)
+	{
+		if (pipe_counter%2 == 1)//odd
+		{
+			command->stdfiles.in=pipe_tmp_file1_path;
+		}
+		else//even
+		{
+			command->stdfiles.in=pipe_tmp_file2_path;
+		}
+		pipe_counter=0;
+	}
+	else if(pipe_flag == exist && pipe_counter%2 == 1)
+	{
+		open(pipe_tmp_file2_path, O_TRUNC);
+
+		command->stdfiles.in=pipe_tmp_file1_path;
+		command->stdfiles.out=pipe_tmp_file2_path;
+	}
+	else if(pipe_flag == exist && pipe_counter%2 == 1)
+	{
+		open(pipe_tmp_file1_path, O_TRUNC);
+
+		command->stdfiles.in=pipe_tmp_file2_path;
+		command->stdfiles.out=pipe_tmp_file1_path;
+	}
+	//executing commands
 	if((internal_command_index=is_internal_command(command))!=-1)
 	{
 		if(internal_executer(command, internal_command_index) == -1)
@@ -381,7 +443,7 @@ int interpreter(command_t* command, char* input_line)
 		case -2:
 			printf("maximum number of variables is reached.\n");
 			ret_val =-2;
-		break;
+			break;
 		case -3:
 			printf("Error while fork to execute external command\n");
 			printf("errno = %d\n",errno);
