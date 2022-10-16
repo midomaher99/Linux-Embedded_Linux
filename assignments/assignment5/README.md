@@ -1,5 +1,5 @@
 # Assignment 5
-    making a simple shell executes external commands, support some internal commands and other features
+Making a simple shell executes external commands, support some internal commands and other features.
 
 ## Internal commands
 * mycd [directory path] : to change the current working directory to the given one. Note: the pase can be absolute or relative.
