@@ -15,8 +15,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include "stdlib.h"
-
+#include <stdlib.h>
+#include <string.h>
 #include "config.h"
 #include "prompt.h"
 #include "loc_vars.h"
@@ -39,17 +39,28 @@ int main ()
 	int prompt_status ;
 	char* input_line;	//the input from user
 	ssize_t  input_length;
-
-
-	int history_fd= open ("/tmp/.mybash_history.log", O_CREAT |O_APPEND |O_RDWR,0666);	//for commands history save
-	//check open return
-	if (history_fd == -1)
+	char* username =NULL;
+	char history_file_path [70]={"/home/"};
+	int history_fd=-1;
+	if((username=getenv("USER")) ==NULL)
 	{
-		printf("Error openning /tmp/.mybash_history.log to save commands history.\n");
+		printf("Error getting the username to open the history file.\n");
 		printf("shellDemmo will executed without commands history saving/n.");
-		printf("errno = %d\n",errno);
-	}
 
+	}
+	else
+	{
+		strcat(history_file_path,username);
+		strcat(history_file_path,"/.mybash_history");
+		history_fd= open (history_file_path, O_CREAT |O_APPEND |O_RDWR,0666);	//for commands history save
+		//check open return
+		if (history_fd == -1)
+		{
+			printf("Error openning /home/maher/.mybash_history to save commands history.\n");
+			printf("shellDemmo will executed without commands history saving/n.");
+			printf("errno = %d\n",errno);
+		}
+	}
 	while(1)
 	{
 		//re-init the affected values
@@ -137,7 +148,7 @@ int main ()
  * \Parameters (in) : int history_fd : the file descriptor of the file where commands history saved
  *					  char* input_line : the input line to be saved
  * \Return value:   : int 1 : if success
-* 						 -1 : if writing to the history file failed
+ * 						 -1 : if writing to the history file failed
  *******************************************************************************/
 int save_to_history(int history_fd,char* input_line, ssize_t  input_length)
 {

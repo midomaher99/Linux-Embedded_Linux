@@ -142,11 +142,11 @@ int myhistory(int argc, char*argv[])
 		ssize_t write_size;
 		char read_buff[HISTORY_READ_BUFF_SIZE];
 
-		int history_fd= open ("/tmp/.mybash_history.log", O_RDONLY);
+		int history_fd= open ("/home/maher/.mybash_history", O_RDONLY);
 
 		if(history_fd == -1)
 		{
-			printf("Error  /tmp/.mybash_history.log to read commands history.\n");
+			printf("Error  //home/maher/.mybash_history to read commands history.\n");
 			printf("errno = %d\n",errno);
 			ret_val= -2;
 		}
@@ -154,7 +154,7 @@ int myhistory(int argc, char*argv[])
 		{
 			if(read_size == -1)
 			{
-				printf("Error reading /tmp/.mybash_history.log\n");
+				printf("Error reading /home/maher/.mybash_history\n");
 				printf("errno = %d\n",errno);
 				ret_val= -3;
 			}
