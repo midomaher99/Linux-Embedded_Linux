@@ -111,17 +111,33 @@ int mycd(int argc, char*argv[])
 		printf("too much arguments\n");
 		ret_val = -1;
 	}
-	else if(argc<2)
+	else if(argc==1)
 	{
-		printf("not enough arguments arguments\n");
-		ret_val = -2;
+		char*username=NULL;
+		char user_path[70]= {"/home/"};
+		if((username=getenv("USER")) ==NULL)
+		{
+			printf("Error getting the username to change directory for /home/USER.\n");
+		}
+		else
+		{
+			strcat(user_path, username);
+
+			if(chdir(user_path) == -1)
+			{
+				printf("Error changing directory.\n");
+				printf("errno = %d\n", errno);
+				ret_val =-3;
+			}
+		}
 	}
-	else{
+	else
+	{
 		if(chdir(argv[1]) == -1)
 		{
 			printf("Error changing directory.\n");
 			printf("errno = %d\n", errno);
-			ret_val =-3;
+			ret_val =-4;
 		}
 	}
 	return ret_val;
