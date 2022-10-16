@@ -214,6 +214,8 @@ int myexport(int argc, char*argv[])
 				break;
 			}
 		}
+		if (ret_val !=1)
+			printf("variable \"%s\" not found in local variables\n", argv[1]);
 
 	}
 	return ret_val;
