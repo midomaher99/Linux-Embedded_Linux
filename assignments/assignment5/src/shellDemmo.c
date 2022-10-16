@@ -8,10 +8,8 @@
 /**********************************************************************************************************************
  *  INCLUDES
  *********************************************************************************************************************/
-#include "prompt.h"
-#include "stdio.h"
 
-
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -20,46 +18,19 @@
 #include "stdlib.h"
 
 #include "config.h"
-
+#include "prompt.h"
 #include "loc_vars.h"
 #include "commands.h"
 #include "interpreter.h"
 
 /**********************************************************************************************************************
- *  LOCAL MACROS CONSTANT\FUNCTION
- *********************************************************************************************************************/
-
-/**********************************************************************************************************************
- *  LOCAL DATA
- *********************************************************************************************************************/
-
-/**********************************************************************************************************************
- *  GLOBAL DATA
- *********************************************************************************************************************/
-
-/**********************************************************************************************************************
  *  LOCAL FUNCTION PROTOTYPES
  *********************************************************************************************************************/
+int save_to_history(int history_fd,char* input_line, ssize_t  input_length);
 
 /**********************************************************************************************************************
- *  LOCAL FUNCTIONS
+ *  GLOBAL FUNCTIONS
  *********************************************************************************************************************/
-int save_to_history(int history_fd,char* input_line, ssize_t  input_length)
-{
-	int ret_val=1;
-	ssize_t write_size;
-	if (input_length != 1 && input_line[0] != '\n') //not only enter
-	{
-		if((write_size=write(history_fd, input_line,input_length))== -1)
-		{
-			ret_val=-1;
-		}
-	}
-	return ret_val;
-}
-
-
-
 int main ()
 {
 	int ret_val=1;
@@ -69,8 +40,8 @@ int main ()
 	char* input_line;	//the input from user
 	ssize_t  input_length;
 
-	int history_fd= open ("/tmp/.mybash_history.log", O_CREAT |O_APPEND |O_RDWR,0666);	//for commands history save
 
+	int history_fd= open ("/tmp/.mybash_history.log", O_CREAT |O_APPEND |O_RDWR,0666);	//for commands history save
 	//check open return
 	if (history_fd == -1)
 	{
@@ -127,12 +98,23 @@ int main ()
 			printf("errno = %d\n",errno);
 		}
 
-		input_length ++;//the extra space will be used in the parser
+		input_length ++;//the extra space will be used in the interpreter
 		input_line=realloc(input_line,(size_t) input_length);//avoid over-sizing done by getline()
-
+		if(input_line == NULL)
+		{
+			ret_val =-4;
+			printf("Error allocating the input line buffer.\n");
+			break;
+		}
 		//allocating the args array with the length of the input line for worst case
 		command.ptr_args_arr =(char*(*)[]) malloc(input_length*sizeof(char*));
-
+		if(command.ptr_args_arr == NULL)
+		{
+			ret_val=-5;
+			printf("Error allocating arguments buffer.\n");
+			break;
+		}
+		//parse and execute the line commands
 
 		interpreter(&command, input_line);
 
@@ -144,24 +126,34 @@ int main ()
 	return ret_val;
 }
 
+
 /**********************************************************************************************************************
- *  GLOBAL FUNCTIONS
+ *  LOCAL FUNCTIONS
  *********************************************************************************************************************/
-
 /******************************************************************************
- * \Syntax          : Std_ReturnType FunctionName(AnyType parameterName)
- * \Description     : Describe this service
- *
- * \Sync\Async      : Synchronous
- * \Reentrancy      : Non Reentrant
- * \Parameters (in) : parameterName   Parameter Describtion
- * \Parameters (out): None
- * \Return value:   : Std_ReturnType  E_OK
- *                                    E_NOT_OK
- *******************************************************************************/
+ * \Syntax          : int save_to_history(int history_fd,char* input_line, ssize_t  input_length)
+ * \Description     : save the input line to the commands history
 
+ * \Parameters (in) : int history_fd : the file descriptor of the file where commands history saved
+ *					  char* input_line : the input line to be saved
+ * \Return value:   : int 1 : if success
+* 						 -1 : if writing to the history file failed
+ *******************************************************************************/
+int save_to_history(int history_fd,char* input_line, ssize_t  input_length)
+{
+	int ret_val=1;
+	ssize_t write_size;
+	if (input_length != 1 && input_line[0] != '\n') //not only enter
+	{
+		if((write_size=write(history_fd, input_line,input_length))== -1)
+		{
+			ret_val=-1;
+		}
+	}
+	return ret_val;
+}
 /**********************************************************************************************************************
- *  END OF FILE: FileName.c
+ *  END OF FILE: shellDemmo.c
  *********************************************************************************************************************/
 
 

@@ -2,7 +2,7 @@
 
  *  FILE DESCRIPTION
  *  -------------------------------------------------------------------------------------------------------------------
- *         File:  arguments.c
+ *         File:  interpreter.c
  *********************************************************************************************************************/
 
 /**********************************************************************************************************************
@@ -19,9 +19,6 @@
 #include <stdio.h>
 #include "commands.h"
 #include "loc_vars.h"
-/**********************************************************************************************************************
- *  LOCAL MACROS CONSTANT\FUNCTION
- *********************************************************************************************************************/
 
 /**********************************************************************************************************************
  *  LOCAL DATA TYPES AND STRUCTURES
@@ -38,25 +35,29 @@ typedef enum
 	output
 }redirectFlag_t;
 
-/**********************************************************************************************************************
- *  LOCAL DATA
- *********************************************************************************************************************/
-
-/**********************************************************************************************************************
- *  GLOBAL DATA
- *********************************************************************************************************************/
-
-/**********************************************************************************************************************
- *  LOCAL FUNCTION PROTOTYPES
- *********************************************************************************************************************/
 
 /**********************************************************************************************************************
  *  LOCAL FUNCTIONS
  *********************************************************************************************************************/
 
 
+/******************************************************************************
+ * \Syntax          : int external_redirection(command_t* command)
+ * \Description     : redirect stdfiles for external commands if redirection is nedded
 
-
+ * \Parameters (in) : command_t* command : pointer to command_t structure which contain
+ * 					  new stdfiles
+ *
+ * \Return value:   : int -1: error in opening the target file to redirect input
+ * 					  int -2: error in duplecating the target file to redirect input
+ * 					  int -3: error in closing the target file after stdin pointed to it
+ * 					  int -4: error in opening the target file to redirect output
+ * 					  int -5: error in duplecating the target file to redirect output
+ * 					  int -6: error in closing the target file after stdout pointed to it
+ * 					  int -7: error in opening the target file to redirect err
+ * 					  int -8: error in duplecating the target file to redirect err
+ * 					  int -9: error in closing the target file after stderr pointed to it
+ *******************************************************************************/
 
 int external_redirection(command_t* command)
 {
@@ -66,13 +67,13 @@ int external_redirection(command_t* command)
 	{
 		if((fd= open(command->stdfiles.in, O_CREAT | O_RDWR,0666)) == -1)
 		{
-			printf("Error opening %s to redirect output.\n", command->stdfiles.in);
+			printf("Error opening %s to redirect input.\n", command->stdfiles.in);
 			printf("errno = %d\n",errno);
 			ret_val=-1;
 		}
 		if(dup2(fd,0) == -1)
 		{
-			printf("Error duplicating %s to redirect output.\n", command->stdfiles.in);
+			printf("Error duplicating %s to redirect input.\n", command->stdfiles.in);
 			printf("errno = %d\n",errno);
 			ret_val=-2;
 		}
@@ -109,13 +110,13 @@ int external_redirection(command_t* command)
 	{
 		if((fd= open(command->stdfiles.err, O_CREAT | O_RDWR,0666)) == -1)
 		{
-			printf("Error opening %s to redirect error.\n", command->stdfiles.err);
+			printf("Error opening %s to redirect err.\n", command->stdfiles.err);
 			printf("errno = %d\n",errno);
 			ret_val=-7;
 		}
 		if(dup2(fd,2) == -1)
 		{
-			printf("Error duplicating %s to redirect error.\n", command->stdfiles.err);
+			printf("Error duplicating %s to redirect err.\n", command->stdfiles.err);
 			printf("errno = %d\n",errno);
 			ret_val=-8;
 		}
@@ -133,38 +134,18 @@ int external_redirection(command_t* command)
  *********************************************************************************************************************/
 
 /******************************************************************************
- * \Syntax          : void extract(char* line, ssize_t length, char** (**args)[]);
- * \Description     : this function extracts the arguments of commands entered by user
- * 					  in a '\n' terminated line.
- * 					  the arguments of each command are sequentially pointed *args and a '\0' separates
- * 					  between the arguments of each command
- * 					  ex:(NOTE: set the tab size to 4 spaces)
+ * \Syntax          : int parser(command_t* command, char* input_line, int* start_index)
+ * \Description     : parse only one command from the input line the command starts
+ * 					  at the index of start_index and ends with ';' or end of line
+ *					  and evaluates the variables if '$' detected
+ * \Parameters (in) :char* input_line : the imput line contains the command to be parsed
+ * 					 int* start_index : the index of the frist character of the command
+ * 					 to be barsed
  *
- * 					 command no:|------1-----|    |-2-|    |-----------3----------|
- * 					  			 ________________________________________________________________
- * 					 		    | | |    | | |    | | |    | | | |    | | | | | | |    |	|	 |
- * 					 input line:|l|s|    |-|a|  ; |p|s|  ; |v|i|m|    |m|a|i|n|.|c|'\n'|'\0'|'\0'|
- *					   		    |_|_|____|_|_|____|_|_|____|_|_|_|____|_|_|_|_|_|_|____|____|____|
- *
- *		 					  	 ________________________________________________________________
- * 					 		    | | |    | | |    | | |    | | | |    | | | | | | |    |	|	 |
- * 	 input line after executing:|l|s|'\0'|-|a|'\0'|p|s|'\0'|v|i|m|'\0'|m|a|i|n|.|c|'\0'|'\n'|'\0'|
- *					   		    |_|_|____|_|_|____|_|_|____|_|_|_|____|_|_|_|_|_|_|____|____|____|
- *					  			 ^		  ^		   ^		^		   ^				^
- *					  			 |________| _______| _______|__________|________________|_____________
- * 					 		    ||		 ||  |	  ||  |	   ||		  ||		  |	   ||	|	 |	  |
- * 	 					   ARGS:||       ||  |'\0'||  |'\0'||	 	  ||          |'\0'||   |'\0'|'\n'|
- *					   		    |________|___|____|___|____|__________|___________|____|____|____|____|
- *
- *
- * \Parameters (in) : char* line 	   : the input from the user the line is '\n' terminated
- * 					  ssize_t length   : the input line length + 2
- * \Parameters (out): char* (**args)[]: will be dynamically allocated to contain the commands' arguments
- * 										 must be freed after calling the function
- * \Return value:   : None
+ * \Parameters (out): command_t* command : pointer to command_t structure to put the
+ * 					  command's args and stdfiles in case of redirection in it
+ * \Return value:   : int the index of the next command in the line
  *******************************************************************************/
-
-
 int parser(command_t* command, char* input_line, int* start_index)
 {
 	binaryFlag_t separator_flag=exist;	//exist when the last char is a separator (space, ';', '\n' or whatever except regular character)
@@ -241,7 +222,7 @@ int parser(command_t* command, char* input_line, int* start_index)
 
 	}
 
-	//variables evaluating
+	//variables evaluating in case of '$' detected
 	char* variable=NULL;
 
 	for (int i=0;i<args_iterator;i++)	//loop for all args to find the dereference symbol '$'
@@ -270,6 +251,24 @@ int parser(command_t* command, char* input_line, int* start_index)
 }
 
 
+/******************************************************************************
+ * \Syntax          : int executer(command_t* command)
+ * \Description     : execute the parsed command in all cases(internal and external command OR variable definition)
+ *					  and do the stdfiles redirection if exist
+
+ * \Parameters (in) : command_t* command : pointer to command_t structure which contain
+ * 					  command's args and stdfiles in case of redirection
+ *
+ * \Return value:   : int 1 : if success
+ * 						 -1	: if error in forking to the new process
+ * 						 -2 : if error in parent waiting for the child status
+ * 						 -3 : if the child is not terminated normally
+ * 						 -4 : error in redirecting stdfiles in child
+ * 						 -5 : error in execp function in the child
+ *
+ * 						 NOTE: in both -4 and -5 return values , the error message will be printed
+ * 						 	   in the child process
+ *******************************************************************************/
 
 int executer(command_t* command)
 {
@@ -278,12 +277,14 @@ int executer(command_t* command)
 	int val_index;
 	if((internal_command_index=is_internal_command(command))!=-1)
 	{
-		ret_val=internal_executer(command, internal_command_index);
+		if(internal_executer(command, internal_command_index) == -1)
+			ret_val =-1;
 
 	}
 	else if((val_index=is_variable(command))!=-1)
 	{
-		ret_val=variable_executer(command, val_index);
+		if(variable_executer(command, val_index) ==-1)
+			ret_val=-2;
 	}
 	else	//extenal command
 	{
@@ -291,63 +292,122 @@ int executer(command_t* command)
 		pid_t ret_pid;
 		int child_status;
 		ret_pid=fork();
-		if(ret_pid < 0)//faild
-		{
-			printf("Error while fork to execute external command\n");
-			printf("errno = %d\n",errno);
-			ret_val =-1;
 
-		}
+		if(ret_pid < 0)//faild
+			ret_val =-3;
+
 		else if(ret_pid > 0)//parent
 		{
 			if(wait(&child_status) == -1)
-			{
-				printf("Error while waiting for the child process status\n");
-				printf("errno = %d\n",errno);
-			}
+				ret_val=-4;
+
+			if(!WIFEXITED(child_status))	//child is not terminated normally
+				ret_val=-5;
+			if(WEXITSTATUS(child_status) == 100)
+				ret_val =-6;
+			else if (WEXITSTATUS(child_status) == 101)
+				ret_val =-7;
 
 		}
-		else//child
+		else	//child
 		{
 			//redirections
-			external_redirection(command);
+			if(external_redirection(command)<0)
+			{
+				_exit(100);	//return a unique integer to parent
+			}
 
 			//exec
-			execvp((*command->ptr_args_arr)[0],*command->ptr_args_arr);
+			if(execvp((*command->ptr_args_arr)[0],*command->ptr_args_arr) == -1)
+			{
+				printf("Error executing an external command from execvp().\n");
+				printf("errno = %d\n",errno);
+				_exit(101);//return a unique integer to parent
+			}
 		}
 	}
+
 	command->stdfiles.in=NULL;
 	command->stdfiles.out=NULL;
 	command->stdfiles.err=NULL;
+
+	return ret_val;
 }
 
 
 
 
-
-
+/******************************************************************************
+ * \Syntax          : int interpreter(command_t* command, char* input_line)
+ * \Description     : parse the input line and execute the commands in the line
+ * 					  in case of error in a command all next commands will not be executed
+ *
+ * \Parameters (in) : command_t* command : pointer to command_t structure which contain
+ * 					  command's args and stdfiles in case of redirection
+ * 					  char* input_line	 : the input line which contains the commands to be executed
+ *
+ * \Return value:   : int 1 : if success
+ * 						 -2 : if error when definenig variable due to maximum numbers of variables reached
+ * 						 -3	: if error in forking to the new process
+ * 						 -4 : if error in parent waiting for the child status
+ * 						 -5 : if the child is not terminated normally
+ * 						 -6 : error in redirecting stdfiles in child
+ * 						 -7 : error in execp function in the child
+ *
+ * 						 NOTE: in both -6 and -7 return values , the error message will be printed
+ * 						 	   in the child process
+ *******************************************************************************/
 
 int interpreter(command_t* command, char* input_line)
 {
+	int ret_val=1;
 	int index_new_command=0;
-	//parsing a line
 	/*
+	 * parsing a line
 	 * in case of line contains multi-commands, commands will be parsed
 	 * and executed sequentially
 	 */
-
 	while(input_line[index_new_command] != '\n')	//loop till the end of line(last command)
 	{
 
 		//parser will return every time a single command parsed
 		index_new_command=parser(command, input_line, &index_new_command);
-		//cheack return
+
 		//execute the parsed command
-		executer(command);
-		//check return
+		switch(executer(command))
+		{
+		case	1:
+			break;
+		case -2:
+			printf("maximum number of variables is reached.\n");
+			ret_val =-2;
+		break;
+		case -3:
+			printf("Error while fork to execute external command\n");
+			printf("errno = %d\n",errno);
+			ret_val =-3;
+			break;
+		case -4:
+			printf("Error while waiting for the child process status\n");
+			printf("errno = %d\n",errno);
+			ret_val=-4;
+			break;
+		case -5:
+			printf("External command %s is not terminated normally.\n",(*command->ptr_args_arr)[0]);
+			ret_val=-5;
+			break;
+		case -6://error redirecting childs stdfiles
+			ret_val =-6;
+			break;
+		case -7://error in execvp in child
+			ret_val = -7;
+			break;
+		}
 
+		if(ret_val<0)
+			break;	//don't execute the remained commands in the line
 	}
-
+	return ret_val;
 }
 
 /**********************************************************************************************************************

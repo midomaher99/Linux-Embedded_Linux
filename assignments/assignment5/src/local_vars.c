@@ -2,10 +2,7 @@
 
  *  FILE DESCRIPTION
  *  -------------------------------------------------------------------------------------------------------------------
- *         File:  <Write File Name>
- *       Module:  -
- *
- *  Description:  <Write File DESCRIPTION here>     
+ *         File: local_vars.c
  *  
  *********************************************************************************************************************/
 
@@ -18,9 +15,6 @@
 #include "commands.h"
 #include "stdlib.h"
 #include "string.h"
-/**********************************************************************************************************************
- *  LOCAL MACROS CONSTANT\FUNCTION
- *********************************************************************************************************************/
 
 /**********************************************************************************************************************
  *  LOCAL DATA
@@ -33,30 +27,18 @@ int variables_counter=0;
 locVariable_t* loc_vars_array[NUMBER_OF_VARIABLES]={NULL};
 
 /**********************************************************************************************************************
- *  LOCAL FUNCTION PROTOTYPES
- *********************************************************************************************************************/
-
-/**********************************************************************************************************************
- *  LOCAL FUNCTIONS
- *********************************************************************************************************************/
-
-/**********************************************************************************************************************
  *  GLOBAL FUNCTIONS
  *********************************************************************************************************************/
 
 /******************************************************************************
- * \Syntax          : Std_ReturnType FunctionName(AnyType parameterName)
- * \Description     : Describe this service
+ * \Syntax          : char *getloc(const char *name)
+ * \Description     : similar to getenv function gets the local variable value
  *
- * \Sync\Async      : Synchronous
- * \Reentrancy      : Non Reentrant
- * \Parameters (in) : parameterName   Parameter Describtion
- * \Parameters (out): None
- * \Return value:   : Std_ReturnType  E_OK
- *                                    E_NOT_OK
+ * \Parameters (in) : char *name : the name of the required variable
+ * \Return value:   : char* : the value of the variable in case of found in loc_vars_array and NULL is not found
  *******************************************************************************/
 
-char *getloc(const char *name)
+char *getloc(char *name)
 {
 	char* ret_val=NULL;
 	for(int i =0; loc_vars_array[i] != NULL; i++)
@@ -72,7 +54,16 @@ char *getloc(const char *name)
 
 
 
-
+/******************************************************************************
+ * \Syntax          : int is_variable(command_t* command)
+ * \Description     : determine if the given command is a variable definition or not
+ *
+ * \Parameters (in) : command_t* command : pointer to command_t structure which contain
+ * 					  command's args
+ *
+ * \Return value:   : int -1 : in case of not a variable definition
+ * 					  the index of the frist character of the value in case of variable defenition
+ *******************************************************************************/
 int is_variable(command_t* command)
 {
 	int ret_val=-1;
@@ -88,16 +79,24 @@ int is_variable(command_t* command)
 	return ret_val;
 }
 
-
+/******************************************************************************
+ * \Syntax          : int variable_executer(command_t* command,int val_index)
+ * \Description     : executes the variable definition command
+ *
+ * \Parameters (in) : command_t* command : pointer to command_t structure which contain
+ * 					  command's args
+ *
+ * \Return value:   : int 1 : if success
+ * 						 -1 : if the muximum number defined in config.h reached and unable to add other variables
+ *
+ *******************************************************************************/
 int variable_executer(command_t* command,int val_index)
 {
 	int ret_val=1;
 
 	if (variables_counter>=NUMBER_OF_VARIABLES)
-	{
-		printf("maximum number of variables is reached.\n");
 		ret_val =-1;
-	}
+
 	else
 	{
 		int i;
@@ -122,5 +121,5 @@ int variable_executer(command_t* command,int val_index)
 
 
 /**********************************************************************************************************************
- *  END OF FILE: FileName.c
+ *  END OF FILE: local_vars.c
  *********************************************************************************************************************/

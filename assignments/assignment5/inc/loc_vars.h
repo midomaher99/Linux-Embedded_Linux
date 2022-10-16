@@ -32,7 +32,7 @@ extern locVariable_t* loc_vars_array[256];
 /**********************************************************************************************************************
  *  GLOBAL FUNCTION PROTOTYPES
  *********************************************************************************************************************/
-extern char *getloc(const char *name);
+extern char *getloc(char *name);
 extern int is_variable(command_t* command);
 extern int variable_executer(command_t* command,int val_index);
  

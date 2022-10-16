@@ -97,6 +97,7 @@ int myhistory(int argc, char*argv[])
 	}
 	return ret_val;
 }
+
 int myset(int argc, char*argv[])
 {
 	int ret_val=1;
@@ -148,17 +149,17 @@ int myexport(int argc, char*argv[])
  *********************************************************************************************************************/
 
 /******************************************************************************
- * \Syntax          : Std_ReturnType FunctionName(AnyType parameterName)
- * \Description     : Describe this service
+ * \Syntax          : int is_internal_command(command_t* command)
+ * \Description     : check if the given command is an internal or not
  *
- * \Sync\Async      : Synchronous
- * \Reentrancy      : Non Reentrant
- * \Parameters (in) : parameterName   Parameter Describtion
- * \Parameters (out): None
- * \Return value:   : Std_ReturnType  E_OK
- *                                    E_NOT_OK
- *******************************************************************************/
 
+ * \Parameters (in) : command_t* command : pointer to command_t structure which contain
+ * 					  command's args
+
+ * \Return value:   : int -1 : if not an internal command
+ *
+ * 					command index in internal_commands_array:  if an internal command
+ *******************************************************************************/
 
 int is_internal_command(command_t* command)
 {
@@ -173,7 +174,17 @@ int is_internal_command(command_t* command)
 
 
 
+/******************************************************************************
+ * \Syntax          : int internal_executer(command_t*  command,int internal_command_index)
+ * \Description     : executes the given internal command
+ *
 
+ * \Parameters (in) : command_t* command : pointer to command_t structure which contain
+ * 					  command's args
+ * 					  int internal_command_index: the command index in internal_commands_array
+
+ * \Return value:   : int 1
+ *******************************************************************************/
 
 int internal_executer(command_t*  command,int internal_command_index)
 {
@@ -181,6 +192,7 @@ int internal_executer(command_t*  command,int internal_command_index)
 	int argc=0;
 	for(int i =0;(*command->ptr_args_arr)[i]!=(char*)'\0' ;i++)
 		argc++;
+
 
 	ret_val=internal_commands_array[internal_command_index].ptr_command(argc,&((*command->ptr_args_arr)[0]));
 
