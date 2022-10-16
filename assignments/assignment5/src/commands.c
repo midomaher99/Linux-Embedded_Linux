@@ -40,7 +40,7 @@ internalcommand_t internal_commands_array[NUM_OF_INTERNAL_COMMANDS]=
 		{"myset",&myset},
 		{"myexport",&myexport},
 		{"myhistory",&myhistory},
-		{"mycd",&mycd},
+		{"mycd",&mycd}
 
 };
 /**********************************************************************************************************************
@@ -48,8 +48,26 @@ internalcommand_t internal_commands_array[NUM_OF_INTERNAL_COMMANDS]=
  *********************************************************************************************************************/
 int mycd(int argc, char*argv[])
 {
-	//chdir
-	return 0;
+	int ret_val =1;
+	if(argc>2)
+	{
+		printf("too much arguments\n");
+		ret_val = -1;
+	}
+	else if(argc<2)
+	{
+		printf("not enough arguments arguments\n");
+		ret_val = -2;
+	}
+	else{
+		if(chdir(argv[1]) == -1)
+		{
+			printf("Error changing directory.\n");
+			printf("errno = %d\n", errno);
+			ret_val =-3;
+		}
+	}
+	return ret_val;
 }
 
 int myhistory(int argc, char*argv[])
