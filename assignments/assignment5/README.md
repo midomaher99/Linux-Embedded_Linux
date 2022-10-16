@@ -20,5 +20,5 @@ Making a simple shell executes external commands, supports some internal command
 
 ## shellDemmo vs bash-shell
 ![Screenshot from 2022-10-17 01-11-47](https://user-images.githubusercontent.com/41878952/196063481-e9a160ee-c02b-4a1a-bc74-119b7f7dd548.png)
-1. executing external command 'ls'
+1. executing external command `ls`
 2. defining local variable 'x=-l'
