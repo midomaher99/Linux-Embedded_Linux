@@ -10,7 +10,7 @@ Making a simple shell executes external commands, supports some internal command
 
 ## Features
 * Can execute multi commands separated be ';' in the same line.
-* Can redirect input and output of *external commands ONLY* by using the '>' and '<' operators.
-* Can define local variables using *variable=value* command without spaces.
+* Can redirect input and output of **external commands ONLY** by using the '>' and '<' operators.
+* Can define local variables using **variable=value** command without spaces, ex: x=5.
 * Can evaluate local and environment variables if a variable passed as a command argument using '$' operator.
 * If '$' operator is used with a non-exist variable it will be just ignored.
