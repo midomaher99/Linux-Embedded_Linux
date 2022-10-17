@@ -305,7 +305,7 @@ int executer(command_t* command)
 	int val_index;
 
 	//piping redirecting
-	if(pipe_flag == exist && pipe_counter ==1)
+	if(pipe_flag == exist && pipe_counter ==1) //frist pipe (cmd | something)
 	{
 		open(pipe_tmp_file1_path, O_TRUNC);
 		command->stdfiles.out=pipe_tmp_file1_path;
@@ -324,18 +324,19 @@ int executer(command_t* command)
 	}
 	else if(pipe_flag == exist && pipe_counter%2 == 1)
 	{
-		open(pipe_tmp_file2_path, O_TRUNC);
-
-		command->stdfiles.in=pipe_tmp_file1_path;
-		command->stdfiles.out=pipe_tmp_file2_path;
-	}
-	else if(pipe_flag == exist && pipe_counter%2 == 1)
-	{
 		open(pipe_tmp_file1_path, O_TRUNC);
 
 		command->stdfiles.in=pipe_tmp_file2_path;
 		command->stdfiles.out=pipe_tmp_file1_path;
 	}
+	else if(pipe_flag == exist && pipe_counter%2 == 0)
+	{
+		open(pipe_tmp_file2_path, O_TRUNC);
+
+		command->stdfiles.in=pipe_tmp_file1_path;
+		command->stdfiles.out=pipe_tmp_file2_path;
+	}
+
 	//executing commands
 	if((internal_command_index=is_internal_command(command))!=-1)
 	{

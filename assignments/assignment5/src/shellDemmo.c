@@ -34,7 +34,6 @@ int save_to_history(int history_fd,char* input_line, ssize_t  input_length);
 int main ()
 {
 	int ret_val=1;
-
 	command_t command = {NULL};
 	int prompt_status ;
 	char* input_line;	//the input from user
@@ -81,7 +80,6 @@ int main ()
 		}
 	}
 
-
 	if ((pipe_tmp_file2_fd =mkstemp(pipe_tmp_file2_path)) == -1)
 		{
 			printf("Error creating temp files for piping.\n");
@@ -98,7 +96,7 @@ int main ()
 			}
 		}
 
-/*_____________________--__________________________________________________*/
+/*__________________________________________________________________________*/
 	while(1)
 	{
 		//re-init the affected values
