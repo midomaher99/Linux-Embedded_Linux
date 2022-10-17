@@ -27,7 +27,8 @@
  *  LOCAL FUNCTION PROTOTYPES
  *********************************************************************************************************************/
 int save_to_history(int history_fd,char* input_line, ssize_t  input_length);
-
+int open_history_file(int*history_fd);
+int open_piping_tmp_files(char* pipe_tmp_file1_path,char* pipe_tmp_file2_path,int* pipe_tmp_file1_fd,int* pipe_tmp_file2_fd);
 /**********************************************************************************************************************
  *  GLOBAL FUNCTIONS
  *********************************************************************************************************************/
@@ -38,63 +39,14 @@ int main ()
 	int prompt_status ;
 	char* input_line;	//the input from user
 	ssize_t  input_length;
-	char* username =NULL;
-	char history_file_path [70]={"/home/"};
 	int history_fd=-1;
 
 	//history file
-	if((username=getenv("USER")) ==NULL)
-	{
-		printf("Error getting the username to open the history file.\n");
-		printf("shellDemmo will executed without commands history saving/n.");
-
-	}
-	else
-	{
-		strcat(history_file_path,username);
-		strcat(history_file_path,"/.mybash_history");
-		history_fd= open (history_file_path, O_CREAT |O_APPEND |O_RDWR,0666);	//for commands history save
-		//check open return
-		if (history_fd == -1)
-		{
-			printf("Error openning /home/maher/.mybash_history to save commands history.\n");
-			printf("shellDemmo will be executed without commands history saving/n.");
-			printf("errno = %d\n",errno);
-		}
-	}
+	 open_history_file(&history_fd);
 
 	// temp files for piping
-	if ((pipe_tmp_file1_fd =mkstemp(pipe_tmp_file1_path)) == -1)
-	{
-		printf("Error creating temp files for piping.\n");
-		printf("errno= %d",errno);
-		return -15;
-	}
-	else
-	{
-		if((unlink(pipe_tmp_file1_path))==-1)
-		{
-			printf("Error unlinking temp files for piping.\n");
-			printf("errno= %d",errno);
-			return -16;
-		}
-	}
+	 open_piping_tmp_files(pipe_tmp_file1_path,pipe_tmp_file2_path, &pipe_tmp_file1_fd,&pipe_tmp_file2_fd);
 
-	if ((pipe_tmp_file2_fd =mkstemp(pipe_tmp_file2_path)) == -1)
-		{
-			printf("Error creating temp files for piping.\n");
-			printf("errno= %d",errno);
-			return -15;
-		}
-		else
-		{
-			if((unlink(pipe_tmp_file2_path))==-1)
-			{
-				printf("Error unlinking temp files for piping.\n");
-				printf("errno= %d",errno);
-				return -16;
-			}
-		}
 
 /*__________________________________________________________________________*/
 	while(1)
@@ -153,6 +105,7 @@ int main ()
 			printf("Error allocating the input line buffer.\n");
 			break;
 		}
+
 		//allocating the args array with the length of the input line for worst case
 		command.ptr_args_arr =(char*(*)[]) malloc(input_length*sizeof(char*));
 		if(command.ptr_args_arr == NULL)
@@ -161,8 +114,8 @@ int main ()
 			printf("Error allocating arguments buffer.\n");
 			break;
 		}
-		//parse and execute the line commands
 
+		//parse and execute the line commands
 		interpreter(&command, input_line);
 
 		//free dynamic allocated memory
@@ -198,6 +151,89 @@ int save_to_history(int history_fd,char* input_line, ssize_t  input_length)
 		}
 	}
 	return ret_val;
+}
+
+/******************************************************************************
+ * \Syntax          : int open_history_file(int* history_fd)ك
+ * \Description     : opens the file which contains the commands history
+
+ * \Parameters (out) : int* history_fd : the file descriptor of the file where commands history saved
+ * \Return value:   : int history_fd : the opened history file fd
+ * 						a negative int in failure.
+ *******************************************************************************/
+int open_history_file(	int* history_fd)
+{
+	char* username =NULL;
+	char history_file_path [70]={"/home/"};
+
+	if((username=getenv("USER")) ==NULL)
+		{
+			printf("Error getting the username to open the history file.\n");
+			printf("shellDemmo will executed without commands history saving/n.");
+			*history_fd=-1;
+
+		}
+		else
+		{
+			strcat(history_file_path,username);
+			strcat(history_file_path,"/.mybash_history");
+			*history_fd= open (history_file_path, O_CREAT |O_APPEND |O_RDWR,0666);	//for commands history save
+			//check open return
+			if (*history_fd == -1)
+			{
+				printf("Error openning /home/maher/.mybash_history to save commands history.\n");
+				printf("shellDemmo will be executed without commands history saving/n.");
+				printf("errno = %d\n",errno);
+				*history_fd=-2;
+			}
+		}
+	return *history_fd;
+}
+
+/******************************************************************************
+ * \Syntax          : int open_piping_tmp_files(char* pipe_tmp_file1_path,char* pipe_tmp_file2_path,int* pipe_tmp_file1_fd,int* pipe_tmp_file2_fd)
+ * \Description     : opens two temp files to be used for command piping
+ * \Parameters (out) : char* pipe_tmp_file1_path: the path with the name of created temp file1
+ * 					   char* pipe_tmp_file2_path: the path with the name of created temp file2
+ * 					   int* pipe_tmp_file1_fd: the temp file1 fd
+ * 					   int* pipe_tmp_file2_fd: the temp file2 fd
+ * \Return value:   : int 1: in success
+ * 					  negative int in failure
+ *******************************************************************************/
+int open_piping_tmp_files(char* pipe_tmp_file1_path,char* pipe_tmp_file2_path,int* pipe_tmp_file1_fd,int* pipe_tmp_file2_fd)
+{
+	if ((*pipe_tmp_file1_fd =mkstemp(pipe_tmp_file1_path)) == -1)
+		{
+			printf("Error creating temp files for piping.\n");
+			printf("errno= %d",errno);
+			return -1;
+		}
+		else
+		{
+			if((unlink(pipe_tmp_file1_path))==-1)
+			{
+				printf("Error unlinking temp files for piping.\n");
+				printf("errno= %d",errno);
+				return -2;
+			}
+		}
+
+		if ((*pipe_tmp_file2_fd =mkstemp(pipe_tmp_file2_path)) == -1)
+			{
+				printf("Error creating temp files for piping.\n");
+				printf("errno= %d",errno);
+				return -3;
+			}
+			else
+			{
+				if((unlink(pipe_tmp_file2_path))==-1)
+				{
+					printf("Error unlinking temp files for piping.\n");
+					printf("errno= %d",errno);
+					return -4;
+				}
+			}
+		return 1;
 }
 /**********************************************************************************************************************
  *  END OF FILE: shellDemmo.c

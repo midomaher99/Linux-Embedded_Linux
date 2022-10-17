@@ -35,15 +35,22 @@ typedef enum
 	output
 }redirectFlag_t;
 
+
+
+/**********************************************************************************************************************
+ *  GLOBAL DATA
+ *********************************************************************************************************************/
+
+char pipe_tmp_file1_path[]={"/tmp/piping1-XXXXXX"};
+char pipe_tmp_file2_path[]={"/tmp/piping2-XXXXXX"};
+int pipe_tmp_file1_fd;
+int pipe_tmp_file2_fd;
 /**********************************************************************************************************************
  *  LOCAL DATA
  *********************************************************************************************************************/
 static binaryFlag_t pipe_flag = not_exist;
 static int pipe_counter=0; //for multi piping in same line
-char pipe_tmp_file1_path[]={"/tmp/piping1-XXXXXX"};
-char pipe_tmp_file2_path[]={"/tmp/piping2-XXXXXX"};
-int pipe_tmp_file1_fd;
-int pipe_tmp_file2_fd;
+
 
 
 /**********************************************************************************************************************
