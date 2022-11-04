@@ -284,6 +284,7 @@ int myhistory(int argc, char*argv[])
 				}
 			}
 		}
+		close(history_fd);
 		printf("\n");
 	}
 	return ret_val;
