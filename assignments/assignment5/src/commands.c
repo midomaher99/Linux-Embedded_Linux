@@ -43,6 +43,7 @@ internalcommand_t internal_commands_array[NUM_OF_INTERNAL_COMMANDS]=
 
 };
 
+extern char history_file_path [];
 
 /**********************************************************************************************************************
  *  GLOBAL FUNCTIONS
@@ -256,11 +257,11 @@ int myhistory(int argc, char*argv[])
 		ssize_t write_size;
 		char read_buff[HISTORY_READ_BUFF_SIZE];
 
-		int history_fd= open ("/home/maher/.mybash_history", O_RDONLY);
+		int history_fd= open (history_file_path, O_RDONLY);
 
 		if(history_fd == -1)
 		{
-			printf("Error  //home/maher/.mybash_history to read commands history.\n");
+			printf("Error openning %s to read commands history.\n",history_file_path);
 			printf("errno = %d\n",errno);
 			ret_val= -2;
 		}
@@ -268,7 +269,7 @@ int myhistory(int argc, char*argv[])
 		{
 			if(read_size == -1)
 			{
-				printf("Error reading /home/maher/.mybash_history\n");
+				printf("Error reading %s\n",history_file_path);
 				printf("errno = %d\n",errno);
 				ret_val= -3;
 			}
